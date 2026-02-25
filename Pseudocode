@@ -1,0 +1,21 @@
+This file that contains pseudocode for the project
+
+HERE IT IS:
+
+FUNC coordinate_gen(GRL,GCL)
+  tag=""
+  IF RAD=1 THEN
+    IF CAD=1 THEN tag="-R.DIAG"
+    IF CAD=0 THEN tag="-ROW"
+    IF CAD=-1 THEN tag="-L.DIAG"
+
+  ELSE IF RAD=-1 THEN
+    IF CAD=1 THEN tag="+R.DIAG"
+    IF CAD=0 THEN tag="+ROW"
+    IF CAD=-1 THEN tag="+L.DIAG"
+
+  ELSE
+    IF CAD=1 AND RAD=0 THEN tag="+COLUMN"
+    IF CAD=-1 AND RAD=0 THEN tag="-COLUMN"
+    IF CAD=0 AND RAD=0 THEN tag="NO MOVE"
+  RETURN tag
