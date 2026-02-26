@@ -31,3 +31,8 @@ FUNC Movement_selection (tag,coordinate)
   IF tag="+R.DIAG" THEN coordinate=(row-1,col+1)
   IF tag="-R.DIAG" THEN coordinate=(row+1,col+1)
   IF tag="NO MOVE" THEN coordinate=(row,col)
+  RETURN coordinate
+
+FUNC distance(coordinate,destination)
+  RAD=SIGN(destination.row-coordinate.row)
+  CAD=SIGN(destination.column-coordinate.column)
