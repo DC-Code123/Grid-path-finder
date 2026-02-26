@@ -36,3 +36,23 @@ FUNC Movement_selection (tag,coordinate)
 FUNC distance(coordinate,destination)
   RAD=SIGN(destination.row-coordinate.row)
   CAD=SIGN(destination.column-coordinate.column)
+  abs=abs(destination)-abs(coordinate)
+  abs=positive(abs)
+  RETURN (RAD,CAD,abs)
+
+FUNC Presence_check(coordinate,NP,tag)
+  S=send message "p" to NP
+  R=request message "p" from NP
+  IF R !="p" THEN
+    present=false
+  ELSE IF R="p" THEN
+    present=true
+  ELSE
+    ERROR!
+  RETURN present
+
+FUNC senser_and_movement(tag,coordinate,destination,NP,Movement_display)
+  NPP=Presence_check(coordinate,NP)
+  IF NPP=true THEN
+    coordinate=NPP
+  ELSE IF NPP
