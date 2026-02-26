@@ -4,18 +4,30 @@ HERE IT IS:
 
 FUNC coordinate_gen(GRL,GCL)
   tag=""
+  movemement_display=""
   IF RAD=1 THEN
-    IF CAD=1 THEN tag="-R.DIAG"
-    IF CAD=0 THEN tag="-ROW"
-    IF CAD=-1 THEN tag="-L.DIAG"
+    IF CAD=1 THEN tag="-R.DIAG", movement_display="C moves to the upward right diagonal"
+    IF CAD=0 THEN tag="-ROW", movement_display="C moves upward"
+    IF CAD=-1 THEN tag="-L.DIAG", movement_display="C moves to the upward left diagonal"
 
   ELSE IF RAD=-1 THEN
-    IF CAD=1 THEN tag="+R.DIAG"
-    IF CAD=0 THEN tag="+ROW"
-    IF CAD=-1 THEN tag="+L.DIAG"
+    IF CAD=1 THEN tag="+R.DIAG", movement_display="C moves to the downard right diagonal"
+    IF CAD=0 THEN tag="+ROW", movement_display="C moves downward"
+    IF CAD=-1 THEN tag="+L.DIAG", movement_display="C moves to the left downward diagonal"
 
   ELSE
-    IF CAD=1 AND RAD=0 THEN tag="+COLUMN"
-    IF CAD=-1 AND RAD=0 THEN tag="-COLUMN"
-    IF CAD=0 AND RAD=0 THEN tag="NO MOVE"
+    IF CAD=1 AND RAD=0 THEN tag="+COLUMN", movement_display="C moves to the left"
+    IF CAD=-1 AND RAD=0 THEN tag="-COLUMN", movement_display="C moves to the right"
+    IF CAD=0 AND RAD=0 THEN tag="NO MOVE", movement_display="We are here"
   RETURN tag
+
+FUNC Movement_selection (tag,coordinate)
+  IF tag="+ROW" THEN coordinate=(row+1,col)
+  IF tag="-ROW" THEN coordinate=(row-1,col)
+  IF tag="+COLUMN" THEN coordinate=(row,col+1)
+  IF tag="-COLUMN" THEN coordinate=(row,col-1)
+  IF tag="+L.DIAG" THEN coordinate=(row-1,col-1)
+  IF tag="-L.DIAG" THEN coordinate=(row+1,col-1)
+  IF tag="+R.DIAG" THEN coordinate=(row-1,col+1)
+  IF tag="-R.DIAG" THEN coordinate=(row+1,col+1)
+  IF tag="NO MOVE" THEN coordinate=(row,col)
