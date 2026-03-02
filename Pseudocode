@@ -141,3 +141,9 @@ FUNC list_presence_check(coordinate,destination,PP)
 
 FUNC MAIN
 	current_coordinate=coordinate_gen(GRL,GCL)
+	destination_coordinate=coordinate_gen(GRL,GCL)
+	dist=abs(destination)-abs(coordinate)
+	dist=set_to_positive(dist)
+	WHILE dist !=0 THEN
+		tag=""
+		(RM,CM,dist)=distance(current_coordinate,destination_coordinate)
