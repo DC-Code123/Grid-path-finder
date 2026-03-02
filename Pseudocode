@@ -147,3 +147,6 @@ FUNC MAIN
 	WHILE dist !=0 THEN
 		tag=""
 		(RM,CM,dist)=distance(current_coordinate,destination_coordinate)
+		(tag,display)=tag_selection(RM,CM)
+		NP=movement_selection(tag,current_coordinate)
+		senser_and_movement(tag,current,NP,display,path)
