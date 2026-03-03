@@ -1,0 +1,152 @@
+This file that contains pseudocode for the project
+
+HERE IT IS:
+
+FUNC coordinate_gen(GRL,GCL)
+  tag=""
+  movemement_display=""
+  IF RAD=1 THEN
+    IF CAD=1 THEN tag="-R.DIAG", movement_display="C moves to the upward right diagonal"
+    IF CAD=0 THEN tag="-ROW", movement_display="C moves upward"
+    IF CAD=-1 THEN tag="-L.DIAG", movement_display="C moves to the upward left diagonal"
+
+  ELSE IF RAD=-1 THEN
+    IF CAD=1 THEN tag="+R.DIAG", movement_display="C moves to the downard right diagonal"
+    IF CAD=0 THEN tag="+ROW", movement_display="C moves downward"
+    IF CAD=-1 THEN tag="+L.DIAG", movement_display="C moves to the left downward diagonal"
+
+  ELSE
+    IF CAD=1 AND RAD=0 THEN tag="+COLUMN", movement_display="C moves to the left"
+    IF CAD=-1 AND RAD=0 THEN tag="-COLUMN", movement_display="C moves to the right"
+    IF CAD=0 AND RAD=0 THEN tag="NO MOVE", movement_display="We are here"
+  RETURN tag
+
+FUNC Movement_selection (tag,coordinate)
+  IF tag="+ROW" THEN coordinate=(row+1,col)
+  IF tag="-ROW" THEN coordinate=(row-1,col)
+  IF tag="+COLUMN" THEN coordinate=(row,col+1)
+  IF tag="-COLUMN" THEN coordinate=(row,col-1)
+  IF tag="+L.DIAG" THEN coordinate=(row-1,col-1)
+  IF tag="-L.DIAG" THEN coordinate=(row+1,col-1)
+  IF tag="+R.DIAG" THEN coordinate=(row-1,col+1)
+  IF tag="-R.DIAG" THEN coordinate=(row+1,col+1)
+  IF tag="NO MOVE" THEN coordinate=(row,col)
+  RETURN coordinate
+
+FUNC Distance(coordinate,destination)
+	RAD=SIGN(destination.row-coordinate.row)
+	CAD=SIGN(destination.col-coordinate.col)
+	abs=set_to_positive(abs)
+	RETURN(RAD,CAD,abs)
+
+FUNC presence_check(coordinate,NP,tag)
+	S=send message "p" to NP
+	R=request message "p" to NP
+	IF R!="p" THEN
+		present=false
+	ELSE IF R="p" THEN
+		present=true
+	ELSE
+		ERROR!
+	RETURN present
+
+FUNC senser_and_movement(tag,coordinate,destination,NP,movement_display,path)
+	NPP=presence_check(coordinate,NP)
+	IF NPP=true THEN
+		coordinate=NP
+		PRINT(movement_display)
+		PUSH NP TO path
+	ELSE IF NPP=false THEN
+		options_selection(coordinate,NP,tag,path)
+	ELSE
+		ERROR!
+FUNC options_selection(coordinate,NP,tag)
+	row=coordinate.row
+	col=coordinate.col
+	IF tag = "+COLUMN" THEN
+		SP_1=(row-1,col+1)
+		SP_2=(row-1,col+1)
+		t-movement(SP_1,SP_2,PP)
+	ELSE IF tag = "-COLUMN" THEN
+		SP_1=(row+1,col+1,PP)
+		SP_2=(row+1,col-1)
+		t-movement(SP_1,SP_2,PP)
+	ELSE IF tag = "+ROW" THEN
+		SP_1=(row+1,col+1)
+		SP_2=(row-1,col+1)
+		t-movement(SP_1,SP_2,PP)
+	ELSE IF tag = "-ROW" THEN
+		SP_1=(row-1,col-1)
+		SP_2=(row+1,col-1)
+		t-movement(SP_1,SP_2,PP)
+	ELSE IF tag = "+R.DIAG" THEN
+		SP_1=(row,col+1)
+		SP_2=(row-1,col)
+		t-movement(SP_1,SP_2,PP)
+	ELSE IF tag = "-R.DIAG" THEN
+		SP_1=(row+,col)
+		SP_2=(row,col+1)
+		t-movement(SP_1,SP_2,PP)
+	ELSE IF tag = "+L.DIAG" THEN
+		SP_1=(row-1,col)
+		SP_2=(row,col-1)
+		t-movement(SP_1,SP_2,PP)
+	ELSE IF tag = "-L.DIAG" THEN
+		SP_1=(row+1,col)
+		SP_2=(row,col+1)
+		t-movement(SP_1,SP_2,PP)
+
+FUNC t-movement(SP_1,SP_2,PP)
+	SP_1_presence=presence_check(coordinate,SP_1)
+	SP_2_presence=presence_check(coordinate,SP_2)
+	IF SP_1_presence=true and SP_2_presence=true THEN
+		SP_1_abs=abs(SP_1)
+		SP_2_abs=abs(SP_2)
+		IF SP_1_abs>SP_2_abs THEN
+			coordinate=SP_1
+		ELSE IF SP_1_abs<SP_2_abs THEN
+			coordinate=SP_2
+		ELSE
+			coordinate=SP_1
+	ELSE IF SP_1_presence=true and SP_2_presence=false THEN
+		coordinate=SP_1
+	ELSE IF SP_1_presence=false and SP_2_presence=true THEN
+		coordinate=SP_2
+	ELSE
+		NP=list_presence_check(coordinate,destination,PP)
+
+FUNC list_presence_check(coordinate,destination,PP)
+	row=coordinate.row
+	col-coordinate.col
+	1st=[(row-1,col),0]
+	2nd=[(row-1,col+1),0]
+	3rd=[(row,col+1),0]
+	4th=[(row+1,col+1),0]
+	5th=[(row+1,col),0]
+	6th=[(row+1,col-1),0]
+	7th=[(row,col-1),0]
+	8th=[(row-1,col-1),0]
+	ARRAY present_surrounding_cells=[1st,2nd,3rd,4th,5th,6th,7th,8th]
+	FOR cell IN present_surrounding_cells
+		P=presence_check(cell)
+		IF P=False THEN
+			REMOVE cell
+		ELSE IF P=true THEN
+			KEEP cell
+		ELSE
+			ERROR!
+		IF PP !=0
+			REMOVE PP FROM present_surrounding_cells
+	NP = SMALLEST OF cells.1 IN present_surrounding_cells
+
+FUNC MAIN
+	current_coordinate=coordinate_gen(GRL,GCL)
+	destination_coordinate=coordinate_gen(GRL,GCL)
+	dist=abs(destination)-abs(coordinate)
+	dist=set_to_positive(dist)
+	WHILE dist !=0 THEN
+		tag=""
+		(RM,CM,dist)=distance(current_coordinate,destination_coordinate)
+		(tag,display)=tag_selection(RM,CM)
+		NP=movement_selection(tag,current_coordinate)
+		senser_and_movement(tag,current,NP,display,path)
