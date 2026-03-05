@@ -2,151 +2,209 @@ This file that contains pseudocode for the project
 
 HERE IT IS:
 
-FUNC coordinate_gen(GRL,GCL)
-  tag=""
-  movemement_display=""
-  IF RAD=1 THEN
-    IF CAD=1 THEN tag="-R.DIAG", movement_display="C moves to the upward right diagonal"
-    IF CAD=0 THEN tag="-ROW", movement_display="C moves upward"
-    IF CAD=-1 THEN tag="-L.DIAG", movement_display="C moves to the upward left diagonal"
+FUNC coordinate_generator(row_limit,col_limit)
+    RETURN random row between 0 and row_limit-1, random col between 0 and col_limit-1
 
-  ELSE IF RAD=-1 THEN
-    IF CAD=1 THEN tag="+R.DIAG", movement_display="C moves to the downard right diagonal"
-    IF CAD=0 THEN tag="+ROW", movement_display="C moves downward"
-    IF CAD=-1 THEN tag="+L.DIAG", movement_display="C moves to the left downward diagonal"
+FUNC movement_tag_generator(row_move,col_move)
+    tag=""
+    movement_display=""
+    IF row_move = 1 THEN
+        IF col_move = 1 THEN tag="UP-RIGHT", movement_display="C moves up to the right"
+        IF col_move = 0 THEN tag="UP", movement_display="C moves up"
+        IF col_move = -1 THEN tag="UP-LEFT", movement_display="C moves up to the left"
 
-  ELSE
-    IF CAD=1 AND RAD=0 THEN tag="+COLUMN", movement_display="C moves to the left"
-    IF CAD=-1 AND RAD=0 THEN tag="-COLUMN", movement_display="C moves to the right"
-    IF CAD=0 AND RAD=0 THEN tag="NO MOVE", movement_display="We are here"
-  RETURN tag
+    ELSE IF row_move = -1 THEN
+        IF col_move = 1 THEN tag="DOWN-RIGHT", movement_display="C moves down to the right"
+        IF col_move = 0 THEN tag="DOWN", movement_display="C moves down"
+        IF col_move = -1 THEN tag="DOWN-LEFT", movement_display="C moves down to the left"
 
-FUNC Movement_selection (tag,coordinate)
-  IF tag="+ROW" THEN coordinate=(row+1,col)
-  IF tag="-ROW" THEN coordinate=(row-1,col)
-  IF tag="+COLUMN" THEN coordinate=(row,col+1)
-  IF tag="-COLUMN" THEN coordinate=(row,col-1)
-  IF tag="+L.DIAG" THEN coordinate=(row-1,col-1)
-  IF tag="-L.DIAG" THEN coordinate=(row+1,col-1)
-  IF tag="+R.DIAG" THEN coordinate=(row-1,col+1)
-  IF tag="-R.DIAG" THEN coordinate=(row+1,col+1)
-  IF tag="NO MOVE" THEN coordinate=(row,col)
-  RETURN coordinate
+    ELSE
+        IF col_move = 1 AND row_move = 0 THEN tag="RIGHT", movement_display="C moves right"
+        IF col_move = -1 AND row_move = 0 THEN tag="LEFT", movement_display="C moves left"
+        IF col_move = 0 AND row_move = 0 THEN tag="NON", movement_display="C doesn't move"
+    RETURN tag, movement_display
 
-FUNC Distance(coordinate,destination)
-	RAD=SIGN(destination.row-coordinate.row)
-	CAD=SIGN(destination.col-coordinate.col)
-	abs=set_to_positive(abs)
-	RETURN(RAD,CAD,abs)
+FUNC movement_selector (tag,point)
+    row=point.row
+    col=point.col
+    IF tag="DOWN" THEN point=(row+1,col)
+    IF tag="UP" THEN point=(row-1,col)
+    IF tag="RIGHT" THEN point=(row,col+1)
+    IF tag="LEFT" THEN point=(row,col-1)
+    IF tag="DOWN-LEFT" THEN point=(row+1,col-1)
+    IF tag="UP-LEFT" THEN point=(row-1,col-1)
+    IF tag="DOWN-RIGHT" THEN point=(row+1,col+1)
+    IF tag="UP-RIGHT" THEN point=(row-1,col+1)
+    IF tag="NON" THEN point=(row,col)
+    RETURN point
 
-FUNC presence_check(coordinate,NP,tag)
-	S=send message "p" to NP
-	R=request message "p" to NP
-	IF R!="p" THEN
-		present=false
-	ELSE IF R="p" THEN
-		present=true
-	ELSE
-		ERROR!
-	RETURN present
+FUNC distance_calculator(point,destination)
+    row_move = SIGN(destination.row - point.row)
+    col_move = SIGN(destination.col - point.col)
+    absolute_dist = |destination.row - point.row| + |destination.col - point.col|
+    RETURN(row_move, col_move, absolute_dist)
 
-FUNC senser_and_movement(tag,coordinate,destination,NP,movement_display,path)
-	NPP=presence_check(coordinate,NP)
-	IF NPP=true THEN
-		coordinate=NP
-		PRINT(movement_display)
-		PUSH NP TO path
-	ELSE IF NPP=false THEN
-		options_selection(coordinate,NP,tag,path)
-	ELSE
-		ERROR!
-FUNC options_selection(coordinate,NP,tag)
-	row=coordinate.row
-	col=coordinate.col
-	IF tag = "+COLUMN" THEN
-		SP_1=(row-1,col+1)
-		SP_2=(row-1,col+1)
-		t-movement(SP_1,SP_2,PP)
-	ELSE IF tag = "-COLUMN" THEN
-		SP_1=(row+1,col+1,PP)
-		SP_2=(row+1,col-1)
-		t-movement(SP_1,SP_2,PP)
-	ELSE IF tag = "+ROW" THEN
-		SP_1=(row+1,col+1)
-		SP_2=(row-1,col+1)
-		t-movement(SP_1,SP_2,PP)
-	ELSE IF tag = "-ROW" THEN
-		SP_1=(row-1,col-1)
-		SP_2=(row+1,col-1)
-		t-movement(SP_1,SP_2,PP)
-	ELSE IF tag = "+R.DIAG" THEN
-		SP_1=(row,col+1)
-		SP_2=(row-1,col)
-		t-movement(SP_1,SP_2,PP)
-	ELSE IF tag = "-R.DIAG" THEN
-		SP_1=(row+,col)
-		SP_2=(row,col+1)
-		t-movement(SP_1,SP_2,PP)
-	ELSE IF tag = "+L.DIAG" THEN
-		SP_1=(row-1,col)
-		SP_2=(row,col-1)
-		t-movement(SP_1,SP_2,PP)
-	ELSE IF tag = "-L.DIAG" THEN
-		SP_1=(row+1,col)
-		SP_2=(row,col+1)
-		t-movement(SP_1,SP_2,PP)
+FUNC presence_checker(point,next_point)
+    SEND MESSAGE "p" TO next_point
+    REQUEST MESSAGE "p" FROM next_point
+    IF response != "p" THEN
+        present = false
+    ELSE IF response = "p" THEN
+        present = true
+    ELSE
+        ERROR!
+    RETURN present
 
-FUNC t-movement(SP_1,SP_2,PP)
-	SP_1_presence=presence_check(coordinate,SP_1)
-	SP_2_presence=presence_check(coordinate,SP_2)
-	IF SP_1_presence=true and SP_2_presence=true THEN
-		SP_1_abs=abs(SP_1)
-		SP_2_abs=abs(SP_2)
-		IF SP_1_abs>SP_2_abs THEN
-			coordinate=SP_1
-		ELSE IF SP_1_abs<SP_2_abs THEN
-			coordinate=SP_2
-		ELSE
-			coordinate=SP_1
-	ELSE IF SP_1_presence=true and SP_2_presence=false THEN
-		coordinate=SP_1
-	ELSE IF SP_1_presence=false and SP_2_presence=true THEN
-		coordinate=SP_2
-	ELSE
-		NP=list_presence_check(coordinate,destination,PP)
+FUNC random_absent_cell_selector(start_point,destination_point,row_limit,col_limit)
+    PRINT "How many obstacles do you wish?"
+    number_obstacles = INPUT(INTEGER)
+    obstacles = []
+    i = 0
+    WHILE i < number_obstacles THEN
+        cell = coordinate_generator(row_limit,col_limit)
+        IF cell = start_point OR cell = destination_point THEN
+            cell = coordinate_generator(row_limit,col_limit)
+        ELSE
+            ADD cell TO obstacles
+            i = i + 1
+    RETURN obstacles
 
-FUNC list_presence_check(coordinate,destination,PP)
-	row=coordinate.row
-	col-coordinate.col
-	1st=[(row-1,col),0]
-	2nd=[(row-1,col+1),0]
-	3rd=[(row,col+1),0]
-	4th=[(row+1,col+1),0]
-	5th=[(row+1,col),0]
-	6th=[(row+1,col-1),0]
-	7th=[(row,col-1),0]
-	8th=[(row-1,col-1),0]
-	ARRAY present_surrounding_cells=[1st,2nd,3rd,4th,5th,6th,7th,8th]
-	FOR cell IN present_surrounding_cells
-		P=presence_check(cell)
-		IF P=False THEN
-			REMOVE cell
-		ELSE IF P=true THEN
-			KEEP cell
-		ELSE
-			ERROR!
-		IF PP !=0
-			REMOVE PP FROM present_surrounding_cells
-	NP = SMALLEST OF cells.1 IN present_surrounding_cells
+FUNC sensing_and_movement(tag,point,destination,next_point,movement_display,path,obstacles)
+    next_point_presence = presence_checker(next_point,next_point)
+    IF next_point IS IN obstacles THEN
+        next_point_presence = false
+    
+    IF next_point_presence = true THEN
+        point = next_point
+        PRINT(movement_display)
+        ADD next_point TO path
+    ELSE IF next_point_presence = false THEN
+        movement_options_selector(point,next_point,tag,path,obstacles,destination)
+    ELSE
+        ERROR!
+
+FUNC movement_options_selector(point,next_point,tag,path,obstacles,destination)
+    row = point.row
+    col = point.col
+    IF tag = "RIGHT" THEN
+        possible_point_1 = (row-1,col+1)
+        possible_point_2 = (row+1,col+1)
+        movement(possible_point_1,possible_point_2,point,path,obstacles,destination)
+    ELSE IF tag = "LEFT" THEN
+        possible_point_1 = (row-1,col-1)
+        possible_point_2 = (row+1,col-1)
+        movement(possible_point_1,possible_point_2,point,path,obstacles,destination)
+    ELSE IF tag = "DOWN" THEN
+        possible_point_1 = (row+1,col+1)
+        possible_point_2 = (row+1,col-1)
+        movement(possible_point_1,possible_point_2,point,path,obstacles,destination)
+    ELSE IF tag = "UP" THEN
+        possible_point_1 = (row-1,col-1)
+        possible_point_2 = (row-1,col+1)
+        movement(possible_point_1,possible_point_2,point,path,obstacles,destination)
+    ELSE IF tag = "DOWN-RIGHT" THEN
+        possible_point_1 = (row+1,col)
+        possible_point_2 = (row,col+1)
+        movement(possible_point_1,possible_point_2,point,path,obstacles,destination)
+    ELSE IF tag = "UP-RIGHT" THEN
+        possible_point_1 = (row-1,col)
+        possible_point_2 = (row,col+1)
+        movement(possible_point_1,possible_point_2,point,path,obstacles,destination)
+    ELSE IF tag = "DOWN-LEFT" THEN
+        possible_point_1 = (row+1,col)
+        possible_point_2 = (row,col-1)
+        movement(possible_point_1,possible_point_2,point,path,obstacles,destination)
+    ELSE IF tag = "UP-LEFT" THEN
+        possible_point_1 = (row-1,col)
+        possible_point_2 = (row,col-1)
+        movement(possible_point_1,possible_point_2,point,path,obstacles,destination)
+
+FUNC movement(possible_point_1,possible_point_2,current_point,path,obstacles,destination)
+    possible_point_1_presence = presence_checker(possible_point_1,possible_point_1)
+    possible_point_2_presence = presence_checker(possible_point_2,possible_point_2)
+    
+    IF possible_point_1 IS IN obstacles THEN possible_point_1_presence = false
+    IF possible_point_2 IS IN obstacles THEN possible_point_2_presence = false
+    
+    IF possible_point_1_presence = true AND possible_point_2_presence = true THEN
+        dist1 = |destination.row - possible_point_1.row| + |destination.col - possible_point_1.col|
+        dist2 = |destination.row - possible_point_2.row| + |destination.col - possible_point_2.col|
+        IF dist1 < dist2 THEN
+            current_point = possible_point_1
+        ELSE IF dist1 > dist2 THEN
+            current_point = possible_point_2
+        ELSE
+            current_point = possible_point_1
+    ELSE IF possible_point_1_presence = true AND possible_point_2_presence = false THEN
+        current_point = possible_point_1
+    ELSE IF possible_point_1_presence = false AND possible_point_2_presence = true THEN
+        current_point = possible_point_2
+    ELSE
+        current_point = full_presence_checker(current_point,destination,path,obstacles)
+
+FUNC full_presence_checker(point,destination,path,obstacles)
+    row = point.row
+    col = point.col
+    surrounding_cells = [
+        (row-1,col),      // UP
+        (row-1,col+1),    // UP-RIGHT
+        (row,col+1),      // RIGHT
+        (row+1,col+1),    // DOWN-RIGHT
+        (row+1,col),      // DOWN
+        (row+1,col-1),    // DOWN-LEFT
+        (row,col-1),      // LEFT
+        (row-1,col-1)     // UP-LEFT
+    ]
+    
+    available_cells = []
+    FOR EACH cell IN surrounding_cells
+        presence = presence_checker(cell,cell)
+        IF cell IS IN obstacles THEN presence = false
+        IF presence = true THEN
+            IF cell IS NOT IN path THEN
+                ADD cell TO available_cells
+    
+    IF available_cells IS NOT EMPTY THEN
+        best_cell = available_cells[1]  // Start with first cell
+        best_distance = |destination.row - best_cell.row| + |destination.col - best_cell.col|
+        
+        FOR EACH cell IN available_cells
+            distance = |destination.row - cell.row| + |destination.col - cell.col|
+            IF distance < best_distance THEN
+                best_cell = cell
+                best_distance = distance
+        
+        RETURN best_cell
+    ELSE
+        RETURN point  // No movement possible
 
 FUNC MAIN
-	current_coordinate=coordinate_gen(GRL,GCL)
-	destination_coordinate=coordinate_gen(GRL,GCL)
-	dist=abs(destination)-abs(coordinate)
-	dist=set_to_positive(dist)
-	WHILE dist !=0 THEN
-		tag=""
-		(RM,CM,dist)=distance(current_coordinate,destination_coordinate)
-		(tag,display)=tag_selection(RM,CM)
-		NP=movement_selection(tag,current_coordinate)
-		senser_and_movement(tag,current,NP,display,path)
+    // Get grid limits
+    PRINT "Enter row limit:"
+    row_limit = INPUT
+    PRINT "Enter col limit:"
+    col_limit = INPUT
+    
+    // Generate start and destination
+    start_point = coordinate_generator(row_limit,col_limit)
+    destination_point = coordinate_generator(row_limit,col_limit)
+    
+    // Generate obstacles
+    obstacles = random_absent_cell_selector(start_point,destination_point,row_limit,col_limit)
+    
+    // Initialize path
+    path = [start_point]
+    current_point = start_point
+    distance = |destination_point.row - start_point.row| + |destination_point.col - start_point.col|
+    
+    // Main loop
+    WHILE distance != 0 THEN
+        tag = ""
+        (row_move,col_move,distance) = distance_calculator(current_point,destination_point)
+        (tag,display) = movement_tag_generator(row_move,col_move)
+        next_point = movement_selector(tag,current_point)
+        sensing_and_movement(tag,current_point,destination_point,next_point,display,path,obstacles)
+    
+    PRINT "Path found:"
+    FOR EACH point IN path
+        PRINT point
