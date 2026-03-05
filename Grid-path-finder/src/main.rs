@@ -1,82 +1,87 @@
 mod funcs;
 
-use funcs::{Coordinate, MovementTag, MovementDisplay};
+use funcs::{Point, MovementTag};
 use std::io::{self, Write};
 
 fn main() {
-    println!("=== Path Finding Simulation ===\n");
+    println!("=== Grid Path Finding Simulation ===\n");
     
-    // Get grid dimensions
-    let grid_rows = get_input("Enter number of grid rows: ");
-    let grid_cols = get_input("Enter number of grid columns: ");
+    // Get grid limits
+    println!("Enter row limit:");
+    let row_limit = get_input("") as i32;
+    println!("Enter col limit:");
+    let col_limit = get_input("") as i32;
     
-    // Generate start and destination coordinates
-    let start = Coordinate::new(
-        get_input("Enter start row (0-based): "),
-        get_input("Enter start col (0-based): ")
-    );
+    // Generate start and destination points
+    println!("\nGenerating start point...");
+    let start = funcs::coordinate_generator(row_limit, col_limit);
     
-    let destination = Coordinate::new(
-        get_input("Enter destination row (0-based): "),
-        get_input("Enter destination col (0-based): ")
-    );
+    println!("\nGenerating destination point...");
+    let destination = funcs::coordinate_generator(row_limit, col_limit);
     
-    // Validate coordinates
-    if !start.is_valid(grid_rows, grid_cols) || !destination.is_valid(grid_rows, grid_cols) {
-        println!("Error: Coordinates out of grid bounds!");
-        return;
+    println!("\nStart: ({}, {})", start.row, start.col);
+    println!("Destination: ({}, {})", destination.row, destination.col);
+    
+    // Generate obstacles
+    let obstacles = funcs::random_absent_cell_selector(&start, &destination, row_limit, col_limit);
+    println!("\nGenerated {} obstacles", obstacles.len());
+    if obstacles.len() > 0 {
+        println!("Obstacles at:");
+        for (i, obs) in obstacles.iter().enumerate() {
+            println!("  {}: ({}, {})", i + 1, obs.row, obs.col);
+        }
     }
     
-    println!("\nStart: {:?}", start);
-    println!("Destination: {:?}", destination);
-    println!("Finding path...\n");
+    println!("\nFinding path...\n");
     
     // Initialize path tracking
-    let mut path: Vec<Coordinate> = Vec::new();
+    let mut path: Vec<Point> = Vec::new();
     let mut current = start.clone();
+    path.push(current.clone());
     
-    // Calculate initial Manhattan distance
-    let mut dist = funcs::manhattan_distance(&current, &destination);
+    // Calculate initial distance
+    let mut distance = funcs::manhattan_distance(&current, &destination);
     
     // Main pathfinding loop
-    while dist > 0 {
+    let mut steps = 0;
+    let max_steps = row_limit * col_limit * 2;
+    
+    while distance > 0 && steps < max_steps {
+        steps += 1;
+        
         // Get movement direction
-        let (rad, cad, new_dist) = funcs::calculate_direction(&current, &destination);
-        dist = new_dist;
+        let (row_move, col_move, new_dist) = funcs::distance_calculator(&current, &destination);
+        distance = new_dist;
         
         // Generate movement tag and display message
-        let (tag, display) = funcs::generate_movement_tag(rad, cad);
+        let (tag, display) = funcs::movement_tag_generator(row_move, col_move);
         
-        println!("Current position: {:?} - {}", current, display);
+        println!("Step {}: At ({}, {}) - {}", steps, current.row, current.col, display);
         
         // Calculate next potential position
-        let next_pos = funcs::apply_movement(&tag, &current);
+        let next_point = funcs::movement_selector(&tag, &current);
         
         // Check if next position is valid
-        if next_pos.is_valid(grid_rows, grid_cols) {
-            // Sensor and movement logic
-            if let Some(new_pos) = funcs::sensor_and_movement(
+        if next_point.is_valid(row_limit, col_limit) {
+            // Sensor and movement logic with obstacles
+            if let Some(new_pos) = funcs::sensing_and_movement(
                 &current,
-                &next_pos,
+                &next_point,
                 &tag,
                 &display,
                 &mut path,
-                grid_rows,
-                grid_cols
+                row_limit,
+                col_limit,
+                &destination,
+                &obstacles
             ) {
                 current = new_pos;
             } else {
-                // Path blocked, try alternatives
-                println!("  Path blocked, recalculating...");
+                println!("  No valid moves available! Stopping.");
+                break;
             }
         } else {
-            println!("  Movement would go out of bounds!");
-            break;
-        }
-        
-        // Safety check to prevent infinite loops
-        if path.len() > grid_rows * grid_cols * 2 {
-            println!("Path too long, stopping to prevent infinite loop");
+            println!("  Movement would go out of bounds! Stopping.");
             break;
         }
     }
@@ -84,15 +89,18 @@ fn main() {
     // Display results
     println!("\n=== Path Finding Complete ===");
     if current == destination {
-        println!("Successfully reached destination!");
+        println!("✓ Successfully reached destination in {} steps!", steps);
     } else {
-        println!("Stopped at {:?}", current);
-        println!("Destination: {:?}", destination);
+        println!("✗ Stopped at ({}, {})", current.row, current.col);
+        println!("  Destination: ({}, {})", destination.row, destination.col);
+        if steps >= max_steps {
+            println!("  Reason: Reached maximum step limit");
+        }
     }
     
     println!("\nPath taken ({} steps):", path.len());
-    for (i, coord) in path.iter().enumerate() {
-        println!("  {}: {:?}", i + 1, coord);
+    for (i, point) in path.iter().enumerate() {
+        println!("  {}: ({}, {})", i + 1, point.row, point.col);
     }
 }
 
@@ -103,5 +111,11 @@ fn get_input(prompt: &str) -> i32 {
     let mut input = String::new();
     io::stdin().read_line(&mut input).expect("Failed to read line");
     
-    input.trim().parse().expect("Please enter a valid number")
+    match input.trim().parse() {
+        Ok(num) => num,
+        Err(_) => {
+            println!("Please enter a valid number!");
+            0
+        }
+    }
 }
