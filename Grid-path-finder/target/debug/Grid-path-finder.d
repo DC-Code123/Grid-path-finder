@@ -1,0 +1,1 @@
+/home/dcadga/Documents/Coding\ projects/Grid-path-finder/Grid-path-finder/target/debug/Grid-path-finder: /home/dcadga/Documents/Coding\ projects/Grid-path-finder/Grid-path-finder/src/funcs.rs /home/dcadga/Documents/Coding\ projects/Grid-path-finder/Grid-path-finder/src/main.rs

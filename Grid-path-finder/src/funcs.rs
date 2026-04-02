@@ -1,5 +1,5 @@
-use std::io::{self, Write};
 use rand::Rng;
+use std::io::{self, Write};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Point {
@@ -11,7 +11,7 @@ impl Point {
     pub fn new(row: i32, col: i32) -> Self {
         Point { row, col }
     }
-    
+
     pub fn is_valid(&self, max_rows: i32, max_cols: i32) -> bool {
         self.row >= 0 && self.row < max_rows && self.col >= 0 && self.col < max_cols
     }
@@ -33,10 +33,7 @@ pub enum MovementTag {
 /// Generate random coordinate within grid limits
 pub fn coordinate_generator(row_limit: i32, col_limit: i32) -> Point {
     let mut rng = rand::thread_rng();
-    Point::new(
-        rng.gen_range(0..row_limit),
-        rng.gen_range(0..col_limit)
-    )
+    Point::new(rng.gen_range(0..row_limit), rng.gen_range(0..col_limit))
 }
 
 /// Generate movement tag based on direction components
@@ -45,15 +42,21 @@ pub fn movement_tag_generator(row_move: i32, col_move: i32) -> (MovementTag, Str
         (1, 1) => (MovementTag::UpRight, "C moves up to the right".to_string()),
         (1, 0) => (MovementTag::Up, "C moves up".to_string()),
         (1, -1) => (MovementTag::UpLeft, "C moves up to the left".to_string()),
-        
-        (-1, 1) => (MovementTag::DownRight, "C moves down to the right".to_string()),
+
+        (-1, 1) => (
+            MovementTag::DownRight,
+            "C moves down to the right".to_string(),
+        ),
         (-1, 0) => (MovementTag::Down, "C moves down".to_string()),
-        (-1, -1) => (MovementTag::DownLeft, "C moves down to the left".to_string()),
-        
+        (-1, -1) => (
+            MovementTag::DownLeft,
+            "C moves down to the left".to_string(),
+        ),
+
         (0, 1) => (MovementTag::Right, "C moves right".to_string()),
         (0, -1) => (MovementTag::Left, "C moves left".to_string()),
         (0, 0) => (MovementTag::Non, "C doesn't move".to_string()),
-        
+
         _ => (MovementTag::Non, "Invalid movement".to_string()),
     }
 }
@@ -87,7 +90,7 @@ pub fn manhattan_distance(a: &Point, b: &Point) -> i32 {
 }
 
 /// Check if a point is present (simulated sensor)
-pub fn presence_checker(point: &Point, _next_point: &Point) -> bool {
+pub fn presence_checker(_next_point: &Point) -> bool {
     // In a real implementation, this would communicate with the point
     // For simulation, we assume all points are present unless they're obstacles
     true
@@ -95,35 +98,34 @@ pub fn presence_checker(point: &Point, _next_point: &Point) -> bool {
 
 /// Generate random obstacles
 pub fn random_absent_cell_selector(
-    start_point: &Point, 
-    destination_point: &Point, 
-    row_limit: i32, 
-    col_limit: i32
+    start_point: &Point,
+    destination_point: &Point,
+    row_limit: i32,
+    col_limit: i32,
 ) -> Vec<Point> {
     println!("How many obstacles do you wish?");
     print!("Enter number: ");
     io::stdout().flush().unwrap();
-    
+
     let mut input = String::new();
-    io::stdin().read_line(&mut input).expect("Failed to read line");
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
     let number_obstacles: i32 = input.trim().parse().unwrap_or(0);
-    
+
     let mut obstacles = Vec::new();
     let mut i = 0;
     let mut rng = rand::thread_rng();
-    
+
     while i < number_obstacles {
-        let cell = Point::new(
-            rng.gen_range(0..row_limit),
-            rng.gen_range(0..col_limit)
-        );
-        
+        let cell = Point::new(rng.gen_range(0..row_limit), rng.gen_range(0..col_limit));
+
         if cell != *start_point && cell != *destination_point && !obstacles.contains(&cell) {
             obstacles.push(cell);
             i += 1;
         }
     }
-    
+
     obstacles
 }
 
@@ -139,14 +141,17 @@ pub fn sensing_and_movement(
     destination: &Point,
     obstacles: &Vec<Point>,
 ) -> Option<Point> {
-    println!("  Sensor checking position ({}, {})...", next_point.row, next_point.col);
-    
+    println!(
+        "  Sensor checking position ({}, {})...",
+        next_point.row, next_point.col
+    );
+
     // Check if next point is present and not an obstacle
-    let mut next_point_presence = presence_checker(next_point, next_point);
+    let mut next_point_presence = presence_checker(next_point);
     if obstacles.contains(next_point) {
         next_point_presence = false;
     }
-    
+
     if next_point_presence {
         println!("  ✓ {} - Position is available", display);
         if !path.contains(next_point) {
@@ -156,7 +161,15 @@ pub fn sensing_and_movement(
     } else {
         println!("  ✗ {} - Position is blocked!", display);
         // Try alternative options
-        movement_options_selector(current, tag, path, grid_rows, grid_cols, destination, obstacles)
+        movement_options_selector(
+            current,
+            tag,
+            path,
+            grid_rows,
+            grid_cols,
+            destination,
+            obstacles,
+        )
     }
 }
 
@@ -171,7 +184,7 @@ fn movement_options_selector(
     obstacles: &Vec<Point>,
 ) -> Option<Point> {
     println!("  Searching for alternative path...");
-    
+
     // Get alternative positions based on current tag
     let (possible_point_1, possible_point_2) = match tag {
         MovementTag::Right => (
@@ -208,7 +221,7 @@ fn movement_options_selector(
         ),
         MovementTag::Non => return None,
     };
-    
+
     movement(
         &possible_point_1,
         &possible_point_2,
@@ -233,44 +246,59 @@ fn movement(
     obstacles: &Vec<Point>,
 ) -> Option<Point> {
     // Check presence for both possible points
-    let mut possible_point_1_presence = presence_checker(possible_point_1, possible_point_1);
-    let mut possible_point_2_presence = presence_checker(possible_point_2, possible_point_2);
-    
+    let mut possible_point_1_presence = presence_checker(possible_point_1);
+    let mut possible_point_2_presence = presence_checker(possible_point_2);
+
     if obstacles.contains(possible_point_1) {
         possible_point_1_presence = false;
     }
     if obstacles.contains(possible_point_2) {
         possible_point_2_presence = false;
     }
-    
+
     // Check validity
     let point1_valid = possible_point_1.is_valid(grid_rows, grid_cols);
     let point2_valid = possible_point_2.is_valid(grid_rows, grid_cols);
-    
-    match (point1_valid && possible_point_1_presence, point2_valid && possible_point_2_presence) {
+
+    match (
+        point1_valid && possible_point_1_presence,
+        point2_valid && possible_point_2_presence,
+    ) {
         (true, true) => {
             // Both points available - choose the one closer to destination
             let dist1 = manhattan_distance(possible_point_1, destination);
             let dist2 = manhattan_distance(possible_point_2, destination);
-            
-            let chosen = if dist1 <= dist2 { possible_point_1 } else { possible_point_2 };
-            println!("  Both alternatives available, choosing closer to destination: ({}, {})", 
-                     chosen.row, chosen.col);
-            
+
+            let chosen = if dist1 <= dist2 {
+                possible_point_1
+            } else {
+                possible_point_2
+            };
+            println!(
+                "  Both alternatives available, choosing closer to destination: ({}, {})",
+                chosen.row, chosen.col
+            );
+
             if !path.contains(chosen) {
                 path.push(chosen.clone());
             }
             Some(chosen.clone())
         }
         (true, false) => {
-            println!("  Found alternative: ({}, {})", possible_point_1.row, possible_point_1.col);
+            println!(
+                "  Found alternative: ({}, {})",
+                possible_point_1.row, possible_point_1.col
+            );
             if !path.contains(possible_point_1) {
                 path.push(possible_point_1.clone());
             }
             Some(possible_point_1.clone())
         }
         (false, true) => {
-            println!("  Found alternative: ({}, {})", possible_point_2.row, possible_point_2.col);
+            println!(
+                "  Found alternative: ({}, {})",
+                possible_point_2.row, possible_point_2.col
+            );
             if !path.contains(possible_point_2) {
                 path.push(possible_point_2.clone());
             }
@@ -278,7 +306,14 @@ fn movement(
         }
         (false, false) => {
             println!("  No alternatives found in primary direction");
-            full_presence_checker(current_point, destination, path, grid_rows, grid_cols, obstacles)
+            full_presence_checker(
+                current_point,
+                destination,
+                path,
+                grid_rows,
+                grid_cols,
+                obstacles,
+            )
         }
     }
 }
@@ -294,25 +329,25 @@ fn full_presence_checker(
 ) -> Option<Point> {
     // Generate all 8 surrounding cells
     let surrounding_cells = vec![
-        Point::new(point.row - 1, point.col),      // Up
-        Point::new(point.row - 1, point.col + 1),  // Up-Right
-        Point::new(point.row, point.col + 1),      // Right
-        Point::new(point.row + 1, point.col + 1),  // Down-Right
-        Point::new(point.row + 1, point.col),      // Down
-        Point::new(point.row + 1, point.col - 1),  // Down-Left
-        Point::new(point.row, point.col - 1),      // Left
-        Point::new(point.row - 1, point.col - 1),  // Up-Left
+        Point::new(point.row - 1, point.col),     // Up
+        Point::new(point.row - 1, point.col + 1), // Up-Right
+        Point::new(point.row, point.col + 1),     // Right
+        Point::new(point.row + 1, point.col + 1), // Down-Right
+        Point::new(point.row + 1, point.col),     // Down
+        Point::new(point.row + 1, point.col - 1), // Down-Left
+        Point::new(point.row, point.col - 1),     // Left
+        Point::new(point.row - 1, point.col - 1), // Up-Left
     ];
-    
+
     // Filter available cells (valid, present, not in path, not obstacles)
     let mut available_cells: Vec<Point> = surrounding_cells
         .into_iter()
         .filter(|cell| cell.is_valid(grid_rows, grid_cols))
-        .filter(|cell| presence_checker(cell, cell))
+        .filter(|cell| presence_checker(cell))
         .filter(|cell| !obstacles.contains(cell))
         .filter(|cell| !path.contains(cell))
         .collect();
-    
+
     if !available_cells.is_empty() {
         // Find the cell closest to destination
         available_cells.sort_by(|a, b| {
@@ -320,11 +355,13 @@ fn full_presence_checker(
             let dist_b = manhattan_distance(b, destination);
             dist_a.cmp(&dist_b)
         });
-        
+
         let best_cell = available_cells[0].clone();
-        println!("  Found available cell from surroundings: ({}, {})", 
-                 best_cell.row, best_cell.col);
-        
+        println!(
+            "  Found available cell from surroundings: ({}, {})",
+            best_cell.row, best_cell.col
+        );
+
         if !path.contains(&best_cell) {
             path.push(best_cell.clone());
         }
