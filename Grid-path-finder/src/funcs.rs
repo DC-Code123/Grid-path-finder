@@ -39,18 +39,18 @@ pub fn coordinate_generator(row_limit: i32, col_limit: i32) -> Point {
 /// Generate movement tag based on direction components
 pub fn movement_tag_generator(row_move: i32, col_move: i32) -> (MovementTag, String) {
     match (row_move, col_move) {
-        (1, 1) => (MovementTag::UpRight, "C moves up to the right".to_string()),
-        (1, 0) => (MovementTag::Up, "C moves up".to_string()),
-        (1, -1) => (MovementTag::UpLeft, "C moves up to the left".to_string()),
+        (1, 1) => (MovementTag::DownRight, "C moves down to the right".to_string()),
+        (1, 0) => (MovementTag::Down, "C moves down".to_string()),
+        (1, -1) => (MovementTag::DownLeft, "C moves down to the left".to_string()),
 
         (-1, 1) => (
-            MovementTag::DownRight,
-            "C moves down to the right".to_string(),
+            MovementTag::UpRight,
+            "C moves up to the right".to_string(),
         ),
-        (-1, 0) => (MovementTag::Down, "C moves down".to_string()),
+        (-1, 0) => (MovementTag::Up, "C moves up".to_string()),
         (-1, -1) => (
-            MovementTag::DownLeft,
-            "C moves down to the left".to_string(),
+            MovementTag::UpLeft,
+            "C moves up to the left".to_string(),
         ),
 
         (0, 1) => (MovementTag::Right, "C moves right".to_string()),
@@ -74,6 +74,7 @@ pub fn movement_selector(tag: &MovementTag, current: &Point) -> Point {
         MovementTag::DownRight => Point::new(current.row + 1, current.col + 1),
         MovementTag::Non => current.clone(),
     }
+
 }
 
 /// Calculate direction components between two points
@@ -147,7 +148,9 @@ pub fn sensing_and_movement(
     );
 
     // Check if next point is present and not an obstacle
-    let mut next_point_presence = presence_checker(next_point);
+    let mut next_point_presence = next_point.is_valid(grid_rows, grid_cols) &&
+        presence_checker(next_point) &&
+        !obstacles.contains(next_point);
     if obstacles.contains(next_point) {
         next_point_presence = false;
     }
@@ -369,5 +372,69 @@ fn full_presence_checker(
     } else {
         println!("  No available cells found anywhere!");
         None
+    }
+}
+
+//ASCII grid display of current state(for debugging and visualization easily)
+pub fn display_grid(
+    rows: i32,
+    cols: i32,
+    current: &Point,
+    destination: &Point,
+    obstacles: &Vec<Point>,
+    path: &Vec<Point>,
+) {
+    // Display legend:
+    // '.' = empty cell
+    // '#' = obstacle
+    // 'S' = start position
+    // 'D' = destination position
+    // 'C' = current position
+    // '*' = visited path cell
+    let rows = rows as usize;
+    let cols = cols as usize;
+    let mut grid = vec![vec!['.'; cols]; rows];
+
+    for obstacle in obstacles {
+        if obstacle.is_valid(rows as i32, cols as i32) {
+            grid[obstacle.row as usize][obstacle.col as usize] = '#';
+        }
+    }
+
+    if let Some(start) = path.first() {
+        if start.is_valid(rows as i32, cols as i32) {
+            grid[start.row as usize][start.col as usize] = 'S';
+        }
+    }
+
+    for point in path.iter().skip(1) {
+        if point.is_valid(rows as i32, cols as i32)
+            && grid[point.row as usize][point.col as usize] == '.'
+        {
+            grid[point.row as usize][point.col as usize] = '*';
+        }
+    }
+
+    if destination.is_valid(rows as i32, cols as i32) {
+        grid[destination.row as usize][destination.col as usize] = 'D';
+    }
+
+    if current.is_valid(rows as i32, cols as i32) {
+        grid[current.row as usize][current.col as usize] = 'C';
+    }
+
+    println!("\nGrid (row 0 at top):");
+    print!("   ");
+    for col in 0..cols {
+        print!("{:2}", col);
+    }
+    println!();
+
+    for row in 0..rows {
+        print!("{:2} ", row);
+        for col in 0..cols {
+            print!(" {}", grid[row][col]);
+        }
+        println!();
     }
 }

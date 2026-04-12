@@ -1,6 +1,6 @@
 mod funcs;
 
-use funcs::{Point};
+use funcs::{Point, display_grid};
 use std::io::{self, Write};
 
 fn main() {
@@ -11,6 +11,45 @@ fn main() {
     let row_limit = get_input("") as i32;
     println!("Enter col limit:");
     let col_limit = get_input("") as i32;
+
+    // Choice to randomly generate start/destination or input manually
+    // The start point:
+    println!("\nDo you want to randomly generate the start point? (y/n):");
+    let start_choice = get_input_string("").to_lowercase();
+    let start = if start_choice == "y" {
+        funcs::coordinate_generator(row_limit, col_limit)
+    } else {
+        println!("Enter start row:");
+        let row = get_input("") as i32;
+        println!("Enter start col:");
+        let col = get_input("") as i32;
+        Point::new(row, col)
+    };
+    // The destination point:
+    println!("\nDo you want to randomly generate the destination point? (y/n):");
+    let dest_choice = get_input_string("").to_lowercase();
+    let destination = if dest_choice == "y" {
+        funcs::coordinate_generator(row_limit, col_limit)
+    } else {
+        println!("Enter destination row:");
+        let row = get_input("") as i32;
+        println!("Enter destination col:");
+        let col = get_input("") as i32;
+        Point::new(row, col)
+    };
+
+    // The grid display choice:
+    println!("\nDo you wish to display the grid after each step? (y/n):");
+    let grid_display_choice = get_input_string("").to_lowercase();
+    if grid_display_choice == "y" {
+        println!("Grid will be displayed after each step.");
+        let grid_display_choice: bool = true;
+    } else {
+        println!("Grid will not be displayed after each step.");
+        let grid_display_choice: bool = false;
+    }
+
+
 
     // Generate start and destination points
     println!("\nGenerating start point...");
@@ -39,6 +78,12 @@ fn main() {
     let mut current = start.clone();
     path.push(current.clone());
 
+    // Show initial grid
+    println!("Initial grid:");
+    if grid_display_choice == true {
+        display_grid(row_limit, col_limit, &current, &destination, &obstacles, &path);
+    }
+
     // Calculate initial distance
     let mut distance = funcs::manhattan_distance(&current, &destination);
 
@@ -61,27 +106,24 @@ fn main() {
         // Calculate next potential position
         let next_point = funcs::movement_selector(&tag, &current);
 
-        // Check if next position is valid
-        if next_point.is_valid(row_limit, col_limit) {
-            // Sensor and movement logic with obstacles
-            if let Some(new_pos) = funcs::sensing_and_movement(
-                &current,
-                &next_point,
-                &tag,
-                &display,
-                &mut path,
-                row_limit,
-                col_limit,
-                &destination,
-                &obstacles
-            ) {
-                current = new_pos;
-            } else {
-                println!("  No valid moves available! Stopping.");
-                break;
+        // Sensor and movement logic with obstacles and bounds
+        if let Some(new_pos) = funcs::sensing_and_movement(
+            &current,
+            &next_point,
+            &tag,
+            &display,
+            &mut path,
+            row_limit,
+            col_limit,
+            &destination,
+            &obstacles
+        ) {
+            current = new_pos;
+            if grid_display_choice == true {
+                display_grid(row_limit, col_limit, &current, &destination, &obstacles, &path);
             }
         } else {
-            println!("  Movement would go out of bounds! Stopping.");
+            println!("  No valid moves available! Stopping.");
             break;
         }
     }
@@ -118,4 +160,14 @@ fn get_input(prompt: &str) -> i32 {
             0
         }
     }
+}
+
+fn get_input_string(prompt: &str) -> String {
+    print!("{}", prompt);
+    io::stdout().flush().unwrap();
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).expect("Failed to read line");
+
+    input
 }
