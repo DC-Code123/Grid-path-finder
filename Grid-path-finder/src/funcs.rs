@@ -1,5 +1,7 @@
 use rand::Rng;
 use std::io::{self, Write};
+use std::thread::sleep;
+use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Point {
@@ -39,18 +41,18 @@ pub fn coordinate_generator(row_limit: i32, col_limit: i32) -> Point {
 /// Generate movement tag based on direction components
 pub fn movement_tag_generator(row_move: i32, col_move: i32) -> (MovementTag, String) {
     match (row_move, col_move) {
-        (1, 1) => (MovementTag::DownRight, "C moves down to the right".to_string()),
+        (1, 1) => (MovementTag::DownRight, "C moves downwards towards the right".to_string()),
         (1, 0) => (MovementTag::Down, "C moves down".to_string()),
-        (1, -1) => (MovementTag::DownLeft, "C moves down to the left".to_string()),
+        (1, -1) => (MovementTag::DownLeft, "C moves downwards towards the left".to_string()),
 
         (-1, 1) => (
             MovementTag::UpRight,
-            "C moves up to the right".to_string(),
+            "C moves upward towards the right".to_string(),
         ),
         (-1, 0) => (MovementTag::Up, "C moves up".to_string()),
         (-1, -1) => (
             MovementTag::UpLeft,
-            "C moves up to the left".to_string(),
+            "C moves upwards towards the left".to_string(),
         ),
 
         (0, 1) => (MovementTag::Right, "C moves right".to_string()),
@@ -437,4 +439,189 @@ pub fn display_grid(
         }
         println!();
     }
+}
+
+// ──────────── Pure parsing functions (improvement #7) ────────────
+fn parse_i32(input: &str) -> Result<i32, String> {
+    input.parse::<i32>()
+        .map_err(|_| format!("'{}' is not a valid integer", input)) // #2 specific message
+}
+
+fn parse_point(row_str: &str, col_str: &str) -> Result<Point, String> {
+    let row = parse_i32(row_str)?;
+    let col = parse_i32(col_str)?;
+    Ok(Point::new(row, col))
+}
+
+// ──────────── Improved input with EOF handling (#1) ────────────
+pub fn read_line(prompt: &str) -> Option<String> {
+    print!("{}", prompt);
+    io::stdout().flush().ok()?;
+    let mut input = String::new();
+    match io::stdin().read_line(&mut input) {
+        Ok(0) => None,   // Ctrl+D / EOF
+        Ok(_) => Some(input.trim().to_string()),
+        Err(_) => None,
+    }
+}
+
+// ──────────── Grid limits with defaults, retry, cancellation (#3, #5, #6, #9) ────────────
+pub fn get_grid_limit() -> Result<(i32, i32), String> {
+    const MAX_LIMIT: i32 = 100_000;   // #6 sensible maximum
+
+    // Ask random or manual – uses the same y/n logic
+    let random_choice = loop {
+        let ans = read_line("Randomly generate row & col limits? (y/n): ")
+            .unwrap_or_default()
+            .to_lowercase();
+        if ans == "y" || ans == "n" { break ans == "y"; }
+        eprintln!("Please answer 'y' or 'n'.");
+    };
+
+    if random_choice {
+        let mut rng = rand::thread_rng();
+        let rows = rng.gen_range(5..=50);
+        let cols = rng.gen_range(5..=50);
+        println!("Randomly generated: rows = {}, cols = {}", rows, cols);
+        return Ok((rows, cols));
+    }
+
+    let mut attempts = 0;
+    loop {
+        // #5: default 10 when Enter is pressed
+        let row_str = read_line("Enter row limit (default 10): ").unwrap_or_default();
+        let row_str = if row_str.is_empty() { "10".to_string() } else { row_str };
+
+        let col_str = read_line("Enter col limit (default 10): ").unwrap_or_default();
+        let col_str = if col_str.is_empty() { "10".to_string() } else { col_str };
+
+        // #7: parse using pure function
+        let row_limit = match parse_i32(&row_str) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                attempts += 1;
+                if attempts >= 3 {  // #3: retry cancellation
+                    let keep = read_line("Keep trying? (y/n): ").unwrap_or_default().to_lowercase();
+                    if keep != "y" {
+                        return Err("User cancelled grid entry.".to_string());
+                    }
+                    attempts = 0;
+                }
+                sleep(Duration::from_millis(500)); // #9
+                continue;
+            }
+        };
+        let col_limit = match parse_i32(&col_str) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                attempts += 1;
+                if attempts >= 3 {
+                    let keep = read_line("Keep trying? (y/n): ").unwrap_or_default().to_lowercase();
+                    if keep != "y" {
+                        return Err("User cancelled grid entry.".to_string());
+                    }
+                    attempts = 0;
+                }
+                sleep(Duration::from_millis(500));
+                continue;
+            }
+        };
+
+        // #6 max limit check
+        if row_limit > MAX_LIMIT || col_limit > MAX_LIMIT {
+            eprintln!("Error: limit too large (max {}). Got ({}, {})", MAX_LIMIT, row_limit, col_limit);
+            attempts += 1;
+            if attempts >= 3 {
+                let keep = read_line("Keep trying? (y/n): ").unwrap_or_default().to_lowercase();
+                if keep != "y" { return Err("User cancelled grid entry.".to_string()); }
+                attempts = 0;
+            }
+            sleep(Duration::from_millis(500));
+            continue;
+        }
+
+        if row_limit > 0 && col_limit > 0 {
+            return Ok((row_limit, col_limit));
+        } else {
+            eprintln!("Error: limits must be positive.");
+            attempts += 1;
+            if attempts >= 3 {
+                let keep = read_line("Keep trying? (y/n): ").unwrap_or_default().to_lowercase();
+                if keep != "y" { return Err("User cancelled grid entry.".to_string()); }
+                attempts = 0;
+            }
+            sleep(Duration::from_millis(500));
+        }
+    }
+}
+
+// ──────────── Point input (start / destination) with random option ────────────
+pub fn get_point(label: &str, row_limit: i32, col_limit: i32) -> Result<Point, String> {
+    let choice = loop {
+        let ans = read_line(&format!("Randomly generate {} point? (y/n): ", label))
+            .unwrap_or_default().to_lowercase();
+        if ans == "y" || ans == "n" { break ans == "y"; }
+        eprintln!("Please answer 'y' or 'n'.");
+    };
+
+    if choice {
+        Ok(coordinate_generator(row_limit, col_limit))
+    } else {
+        let mut attempts = 0;
+        loop {
+            let row_str = read_line(&format!("Enter {} row: ", label)).unwrap_or_default();
+            let col_str = read_line(&format!("Enter {} col: ", label)).unwrap_or_default();
+
+            let point = parse_point(&row_str, &col_str)?;
+            if point.row < 0 || point.row >= row_limit || point.col < 0 || point.col >= col_limit {
+                eprintln!("Error: point must be within 0..{} for row and 0..{} for col.", row_limit-1, col_limit-1);
+                attempts += 1;
+                if attempts >= 3 {
+                    let keep = read_line("Keep trying? (y/n): ").unwrap_or_default().to_lowercase();
+                    if keep != "y" { return Err("User cancelled point entry.".to_string()); }
+                    attempts = 0;
+                }
+                sleep(Duration::from_millis(500));
+                continue;
+            }
+            return Ok(point);
+        }
+    }
+}
+
+// ──────────── Obstacle count input (default 5-10 random) ────────────
+pub fn get_obstacle_count() -> Result<usize, String> {
+    let input = read_line("Enter number of obstacles (or press Enter for random 5-10): ")
+        .unwrap_or_default();
+    if input.is_empty() {
+        let mut rng = rand::thread_rng();
+        let n = rng.gen_range(5..=10);
+        println!("Randomly chosen obstacle count: {}", n);
+        return Ok(n);
+    }
+    let n = parse_i32(&input)?;
+    if n <= 0 {
+        return Err("Obstacle count must be greater than 0.".to_string());
+    }
+    Ok(n as usize)
+}
+
+// ──────────── Obstacle generator (uses given count) ────────────
+pub fn generate_obstacles(count: usize, start: &Point, dest: &Point, rows: i32, cols: i32) -> Vec<Point> {
+    let mut rng = rand::thread_rng();
+    let mut obstacles = Vec::new();
+    let max_possible = (rows * cols) as usize - 2; // exclude start & dest
+    let actual_count = count.min(max_possible);
+
+    while obstacles.len() < actual_count {
+        let r = rng.gen_range(0..rows);
+        let c = rng.gen_range(0..cols);
+        let candidate = Point::new(r, c);
+        if candidate != *start && candidate != *dest && !obstacles.contains(&candidate) {
+            obstacles.push(candidate);
+        }
+    }
+    obstacles
 }

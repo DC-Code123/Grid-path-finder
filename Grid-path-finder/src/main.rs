@@ -1,70 +1,81 @@
 mod funcs;
 
-use funcs::{Point, display_grid};
-use std::io::{self, Write};
+use std::io::{self,Write};
+use funcs::{Point, display_grid, read_line, get_grid_limit, get_point, generate_obstacles, get_obstacle_count};
 
+// ──────────── Main ────────────
 fn main() {
     println!("=== Grid Path Finding Simulation ===\n");
 
-    // Get grid limits
-    println!("Enter row limit:");
-    let row_limit = get_input("") as i32;
-    println!("Enter col limit:");
-    let col_limit = get_input("") as i32;
-
-    // Choice to randomly generate start/destination or input manually
-    // The start point:
-    println!("\nDo you want to randomly generate the start point? (y/n):");
-    let start_choice = get_input_string("").to_lowercase();
-    let start = if start_choice == "y" {
-        funcs::coordinate_generator(row_limit, col_limit)
-    } else {
-        println!("Enter start row:");
-        let row = get_input("") as i32;
-        println!("Enter start col:");
-        let col = get_input("") as i32;
-        Point::new(row, col)
-    };
-    // The destination point:
-    println!("\nDo you want to randomly generate the destination point? (y/n):");
-    let dest_choice = get_input_string("").to_lowercase();
-    let destination = if dest_choice == "y" {
-        funcs::coordinate_generator(row_limit, col_limit)
-    } else {
-        println!("Enter destination row:");
-        let row = get_input("") as i32;
-        println!("Enter destination col:");
-        let col = get_input("") as i32;
-        Point::new(row, col)
+    // Get grid limits with retry loop
+    let (row_limit, col_limit) = loop {
+        match get_grid_limit() {
+            Ok(t) => break t,
+            Err(e) => {
+                eprint!("Error: {}. Retrying... ", e);
+                io::stderr().flush().unwrap();
+                // loop continues automatically
+            }
+        }
     };
 
-    // The grid display choice:
-    println!("\nDo you wish to display the grid after each step? (y/n):");
-    let grid_display_choice = get_input_string("").to_lowercase();
-    if grid_display_choice == "y" {
-        println!("Grid will be displayed after each step.");
-        let grid_display_choice: bool = true;
-    } else {
-        println!("Grid will not be displayed after each step.");
-        let grid_display_choice: bool = false;
-    }
+    // Get start point
+    let start = loop {
+        match get_point("start", row_limit, col_limit) {
+            Ok(p) => break p,
+            Err(e) => {
+                eprintln!("Error: {}. Please try again.", e);
+                // retry
+            }
+        }
+    };
 
+    // Get destination point
+    let destination = loop {
+        match get_point("destination", row_limit, col_limit) {
+            Ok(p) => {
+                if p == start {
+                    eprintln!("Destination cannot be the same as start. Try again.");
+                    continue;
+                }
+                break p;
+            }
+            Err(e) => {
+                eprintln!("Error: {}. Please try again.", e);
+            }
+        }
+    };
 
-
-    // Generate start and destination points
-    println!("\nGenerating start point...");
-    let start = funcs::coordinate_generator(row_limit, col_limit);
-
-    println!("\nGenerating destination point...");
-    let destination = funcs::coordinate_generator(row_limit, col_limit);
+    // Grid display choice
+    let grid_display_choice = loop {
+        let ans = read_line("Display grid after each step? (y/n): ")
+            .unwrap_or_default().to_lowercase();
+        if ans == "y" {
+            println!("Grid will be displayed after each step.");
+            break "y";
+        } else if ans == "n" {
+            println!("Grid will not be displayed after each step.");
+            break "n";
+        } else {
+            eprintln!("Please answer 'y' or 'n'.");
+        }
+    };
 
     println!("\nStart: ({}, {})", start.row, start.col);
     println!("Destination: ({}, {})", destination.row, destination.col);
 
-    // Generate obstacles
-    let obstacles = funcs::random_absent_cell_selector(&start, &destination, row_limit, col_limit);
+    // Generate obstacles (5-10)
+    let obstacle_count = loop {
+        match get_obstacle_count() {
+            Ok(n) => break n,
+            Err(e) => {
+                eprintln!("Error: {}. Please try again.", e);
+            }
+        }
+    };
+    let obstacles = generate_obstacles(obstacle_count, &start, &destination, row_limit, col_limit);
     println!("\nGenerated {} obstacles", obstacles.len());
-    if obstacles.len() > 0 {
+    if !obstacles.is_empty() {
         println!("Obstacles at:");
         for (i, obs) in obstacles.iter().enumerate() {
             println!("  {}: ({}, {})", i + 1, obs.row, obs.col);
@@ -73,53 +84,33 @@ fn main() {
 
     println!("\nFinding path...\n");
 
-    // Initialize path tracking
     let mut path: Vec<Point> = Vec::new();
     let mut current = start.clone();
     path.push(current.clone());
 
-    // Show initial grid
-    println!("Initial grid:");
-    if grid_display_choice == true {
+    if grid_display_choice == "y" {
         display_grid(row_limit, col_limit, &current, &destination, &obstacles, &path);
     }
 
-    // Calculate initial distance
     let mut distance = funcs::manhattan_distance(&current, &destination);
-
-    // Main pathfinding loop
     let mut steps = 0;
     let max_steps = row_limit * col_limit * 2;
 
     while distance > 0 && steps < max_steps {
         steps += 1;
-
-        // Get movement direction
         let (row_move, col_move, new_dist) = funcs::distance_calculator(&current, &destination);
         distance = new_dist;
-
-        // Generate movement tag and display message
         let (tag, display) = funcs::movement_tag_generator(row_move, col_move);
 
         println!("Step {}: At ({}, {}) - {}", steps, current.row, current.col, display);
 
-        // Calculate next potential position
         let next_point = funcs::movement_selector(&tag, &current);
-
-        // Sensor and movement logic with obstacles and bounds
         if let Some(new_pos) = funcs::sensing_and_movement(
-            &current,
-            &next_point,
-            &tag,
-            &display,
-            &mut path,
-            row_limit,
-            col_limit,
-            &destination,
-            &obstacles
+            &current, &next_point, &tag, &display, &mut path,
+            row_limit, col_limit, &destination, &obstacles
         ) {
             current = new_pos;
-            if grid_display_choice == true {
+            if grid_display_choice == "y" {
                 display_grid(row_limit, col_limit, &current, &destination, &obstacles, &path);
             }
         } else {
@@ -128,7 +119,6 @@ fn main() {
         }
     }
 
-    // Display results
     println!("\n=== Path Finding Complete ===");
     if current == destination {
         println!("✓ Successfully reached destination in {} steps!", steps);
@@ -144,30 +134,4 @@ fn main() {
     for (i, point) in path.iter().enumerate() {
         println!("  {}: ({}, {})", i + 1, point.row, point.col);
     }
-}
-
-fn get_input(prompt: &str) -> i32 {
-    print!("{}", prompt);
-    io::stdout().flush().unwrap();
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).expect("Failed to read line");
-
-    match input.trim().parse() {
-        Ok(num) => num,
-        Err(_) => {
-            println!("Please enter a valid number!");
-            0
-        }
-    }
-}
-
-fn get_input_string(prompt: &str) -> String {
-    print!("{}", prompt);
-    io::stdout().flush().unwrap();
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).expect("Failed to read line");
-
-    input
 }
