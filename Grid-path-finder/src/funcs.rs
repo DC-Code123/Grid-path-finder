@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::thread::sleep;
 use std::time::Duration;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Point {
     pub row: i32,
     pub col: i32,
@@ -624,4 +624,131 @@ pub fn generate_obstacles(count: usize, start: &Point, dest: &Point, rows: i32, 
         }
     }
     obstacles
+}
+
+// ──────────── A* Search (optimal pathfinding) ────────────
+use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::cmp::Ordering;
+
+#[derive(Eq, PartialEq, Clone)]
+struct AStarNode {
+    point: Point,
+    g: i32,  // cost from start
+    h: i32,  // heuristic
+    f: i32,  // g + h
+}
+
+impl Ord for AStarNode {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Reverse order so BinaryHeap becomes a min‑heap on `f`
+        other.f.cmp(&self.f)
+            .then_with(|| self.g.cmp(&other.g))
+    }
+}
+impl PartialOrd for AStarNode {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+/// Heuristic: Chebyshev distance (allows 8‑directional moves with cost 1)
+fn heuristic_estimate(a: &Point, b: &Point) -> i32 {
+    (a.row - b.row).abs().max((a.col - b.col).abs())
+}
+
+/// Returns all 8 valid neighbouring cells
+fn get_neighbors(point: &Point, rows: i32, cols: i32) -> Vec<Point> {
+    let mut neighbors = Vec::with_capacity(8);
+    for dr in -1..=1 {
+        for dc in -1..=1 {
+            if dr == 0 && dc == 0 { continue; }
+            let candidate = Point::new(point.row + dr, point.col + dc);
+            if candidate.is_valid(rows, cols) {
+                neighbors.push(candidate);
+            }
+        }
+    }
+    neighbors
+}
+
+/// Reconstruct path from the `came_from` map
+fn reconstruct_path(mut came_from: HashMap<Point, Point>, goal: &Point) -> Vec<Point> {
+    let mut path = Vec::new();
+    let mut current = goal.clone();
+    while let Some(prev) = came_from.get(&current) {
+        path.push(current.clone());
+        current = prev.clone();
+    }
+    path.push(current);
+    path.reverse();
+    path
+}
+
+/// Public A* function – returns the shortest path (in steps) if one exists
+pub fn a_star_search(
+    start: &Point,
+    goal: &Point,
+    obstacles: &[Point],
+    rows: i32,
+    cols: i32,
+) -> Option<Vec<Point>> {
+    if start == goal {
+        return Some(vec![start.clone()]);
+    }
+    if obstacles.contains(start) || obstacles.contains(goal) {
+        return None;
+    }
+
+    let mut open_set = BinaryHeap::new();
+    let mut came_from: HashMap<Point, Point> = HashMap::new();
+    let mut g_score: HashMap<Point, i32> = HashMap::new();
+    let mut closed_set: HashSet<Point> = HashSet::new();
+
+    let start_h = heuristic_estimate(start, goal);
+    g_score.insert(start.clone(), 0);
+    open_set.push(AStarNode {
+        point: start.clone(),
+        g: 0,
+        h: start_h,
+        f: start_h,
+    });
+
+    while let Some(current_node) = open_set.pop() {
+        let current = current_node.point;
+
+        if current == *goal {
+            return Some(reconstruct_path(came_from, goal));
+        }
+
+        if closed_set.contains(&current) {
+            continue;
+        }
+        closed_set.insert(current.clone());
+
+        let current_g = *g_score.get(&current).unwrap_or(&i32::MAX);
+
+        for neighbor in get_neighbors(&current, rows, cols) {
+            if obstacles.contains(&neighbor) || closed_set.contains(&neighbor) {
+                continue;
+            }
+
+            // Uniform cost of 1 for any of the 8 directions
+            let tentative_g = current_g + 1;
+
+            if tentative_g < *g_score.get(&neighbor).unwrap_or(&i32::MAX) {
+                came_from.insert(neighbor.clone(), current.clone());
+                g_score.insert(neighbor.clone(), tentative_g);
+                let h = heuristic_estimate(&neighbor, goal);
+                let f = tentative_g + h;
+                open_set.push(AStarNode {
+                    point: neighbor.clone(),
+                    g: tentative_g,
+                    h,
+                    f,
+                });
+            }
+        }
+    }
+
+    None // No path found
 }
